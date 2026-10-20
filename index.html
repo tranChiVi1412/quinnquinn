@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>🌷</title>
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background: linear-gradient(170deg, #fff7f0 0%, #ffeef3 50%, #f4ecff 100%);
+    font-family: Georgia, "Times New Roman", serif;
+    color: #6b3a4f;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .dusk {
+    position: fixed; inset: 0; z-index: 0; opacity: 0; transition: opacity 1.2s;
+    background: linear-gradient(180deg, #5b5aa6 0%, #8d7cc9 55%, #e7a6c0 100%);
+  }
+  body.dusk-on .dusk { opacity: 1; }
+  canvas#c { display: block; position: fixed; inset: 0; z-index: 0; }
+
+  /* ---------- scenes ---------- */
+  .scene {
+    position: fixed; inset: 0; z-index: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: clamp(10px, 2.2vh, 20px);
+    padding: 44px 16px 20px; box-sizing: border-box; text-align: center;
+    opacity: 0; visibility: hidden;
+    transition: opacity .9s, visibility 0s .9s;
+  }
+  .scene.active { opacity: 1; visibility: visible; transition: opacity .9s .3s; }
+  .title {
+    font-style: italic; font-weight: normal; margin: 0; color: #d0577f;
+    font-size: clamp(26px, 5vw, 44px);
+    text-shadow: 0 2px 10px rgba(255, 255, 255, .9);
+  }
+  .sub { margin: 0; max-width: 560px; font-size: clamp(14px, 2vw, 18px); line-height: 1.5; color: #8a5a6e; }
+  .btn {
+    font: inherit; font-size: 17px; padding: 12px 26px; border-radius: 999px; cursor: pointer;
+    border: none; color: #fff;
+    background: linear-gradient(135deg, #ffb199, #ff7aa2);
+    box-shadow: 0 6px 18px rgba(255, 122, 162, .35);
+    transition: transform .25s, opacity .6s, left .25s, top .25s;
+  }
+  .btn:hover { filter: brightness(1.05); }
+  .btn.ghost { background: #fff; color: #d0577f; border: 1px solid #f5c0d0; box-shadow: 0 4px 12px rgba(208, 87, 127, .12); }
+  .next { opacity: 0; pointer-events: none; transform: translateY(10px); }
+  .next.show { opacity: 1; pointer-events: auto; transform: none; }
+  .card {
+    background: rgba(255, 255, 255, .78); border: 1px solid #f6d3de;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    border-radius: 16px; padding: 14px 20px; box-sizing: border-box;
+    width: min(92vw, 520px); min-height: 4.4em; line-height: 1.5;
+    font-size: clamp(15px, 2vw, 18px); color: #6b3a4f;
+    box-shadow: 0 8px 24px rgba(208, 87, 127, .12);
+    display: flex; flex-direction: column; justify-content: center; gap: 4px;
+    transition: opacity .25s, transform .25s;
+  }
+  .card.swap { opacity: 0; transform: translateY(6px); }
+  .card small { color: #e08a3c; letter-spacing: .04em; }
+  .count { font-size: 14px; color: #a77a8c; margin: 0; }
+
+  /* sky scene sits on the dusk background */
+  [data-scene="sky"] .title { color: #fff; text-shadow: 0 0 14px rgba(255, 255, 255, .45); }
+  [data-scene="sky"] .sub { color: #f3eaff; }
+  [data-scene="sky"] .card { background: rgba(255, 255, 255, .16); border-color: rgba(255, 255, 255, .35); color: #fff; box-shadow: none; }
+  [data-scene="sky"] .card small { color: #ffe39a; }
+  [data-scene="sky"] .count { color: rgba(255, 255, 255, .75); }
+
+  .dots { position: fixed; top: 14px; left: 0; right: 0; display: flex; justify-content: center; gap: 8px; z-index: 2; pointer-events: none; }
+  .dots i { width: 8px; height: 8px; border-radius: 50%; background: rgba(208, 87, 127, .2); transition: background .5s, transform .5s; }
+  .dots i.on { background: #ff7aa2; transform: scale(1.2); }
+  .music {
+    position: fixed; top: 8px; right: 10px; z-index: 3; width: 38px; height: 38px; border-radius: 50%;
+    border: 1px solid #f5c0d0; background: #fff; color: #d0577f; font-size: 18px; cursor: pointer;
+  }
+  .music.off { opacity: .45; text-decoration: line-through; }
+
+  /* ---------- 0. phone gate ---------- */
+  .gate { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  .gate input {
+    font: inherit; font-size: 20px; letter-spacing: .08em; text-align: center;
+    width: min(70vw, 240px); padding: 12px 16px; box-sizing: border-box;
+    border-radius: 999px; border: 1px solid #f5c0d0; background: #fff; color: #6b3a4f; outline: none;
+    box-shadow: 0 4px 12px rgba(208, 87, 127, .12); user-select: text;
+  }
+  .gate input:focus { border-color: #ff7aa2; box-shadow: 0 0 0 4px rgba(255, 122, 162, .18); }
+  .gate.shake { animation: shake .4s; }
+  #gateMsg { font-size: 15px; color: #d0577f; min-height: 1.4em; }
+  @keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+
+  /* ---------- 1. envelope ---------- */
+  .envelope { position: relative; width: min(78vw, 340px); aspect-ratio: 3 / 2; cursor: pointer; animation: bob 3s ease-in-out infinite; margin-top: 8vh; }
+  .envelope.open { animation: none; cursor: default; }
+  .env-back { position: absolute; inset: 0; background: #f2a7a0; border-radius: 10px; box-shadow: 0 16px 40px rgba(200, 110, 120, .3); }
+  .env-letter {
+    position: absolute; left: 6%; right: 6%; top: 6%; bottom: 8%; z-index: 1;
+    background: #fffdf8; border-radius: 6px; color: #d0577f; font-style: italic; font-size: 19px;
+    display: flex; align-items: flex-start; justify-content: center; padding-top: 10%; box-sizing: border-box;
+    transition: transform 1s .55s ease-out;
+  }
+  .env-front {
+    position: absolute; inset: 0; z-index: 2; border-radius: 10px;
+    background: linear-gradient(160deg, #ffd3c4, #f9b9ad);
+    clip-path: polygon(0 0, 50% 56%, 100% 0, 100% 100%, 0 100%);
+  }
+  .env-flap {
+    position: absolute; left: 0; right: 0; top: 0; height: 62%; z-index: 3;
+    background: linear-gradient(#ffe0d4, #f7c1b5);
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+    transform-origin: top; transform: perspective(800px) rotateX(0deg);
+    transition: transform .7s ease-in-out, z-index 0s .35s;
+  }
+  .env-seal {
+    position: absolute; left: 50%; top: 56%; z-index: 4; width: 52px; height: 52px; margin: -26px 0 0 -26px;
+    border-radius: 50%; display: grid; place-items: center; font-size: 24px;
+    background: radial-gradient(circle at 35% 35%, #fff, #ffe3ea);
+    border: 2px solid #f7b6c6;
+    box-shadow: 0 3px 10px rgba(200, 110, 120, .3); transition: opacity .3s, transform .3s;
+  }
+  .envelope.open .env-seal { opacity: 0; transform: scale(1.4); }
+  .envelope.open .env-flap { transform: perspective(800px) rotateX(180deg); z-index: 0; }
+  .envelope.open .env-letter { transform: translateY(-62%); }
+  .env-hint { color: #b0607e; animation: blink 2s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translateY(-8px) rotate(-1deg); } }
+  @keyframes blink { 50% { opacity: .35; } }
+
+  /* ---------- 2. bouquet ---------- */
+  .scene-bouquet { justify-content: space-between; padding-top: 5vh; padding-bottom: 16px; }
+  .msg { pointer-events: none; }
+  .msg h1 {
+    font-family: "Brush Script MT", "Snell Roundhand", "Segoe Script", "Apple Chancery", cursive;
+    font-weight: normal; margin: 0; color: #e0607e;
+    font-size: clamp(40px, min(8vw, 11vh), 92px);
+    text-shadow: 0 2px 12px rgba(255, 255, 255, .95);
+    opacity: 0; transform: translateY(20px);
+  }
+  .msg p { margin: .5em auto 0; opacity: 0; transform: translateY(20px); }
+  .msg .hint { font-size: 13px; color: #b08396; }
+  .scene-bouquet.active .msg h1 { animation: rise 2s ease-out 4.2s forwards; }
+  .scene-bouquet.active .msg .sub { animation: rise 2s ease-out 5.4s forwards; }
+  .scene-bouquet.active .msg .hint { animation: rise 1s ease-out 7.5s forwards; }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+
+  /* ---------- 3. daisy ---------- */
+  #daisy { width: min(78vw, 46vh); height: min(78vw, 46vh); overflow: visible; animation: spin 90s linear infinite; }
+  .petal { fill: url(#pg); stroke: rgba(208, 87, 127, .35); stroke-width: 1.5; cursor: pointer; transform-box: fill-box; transform-origin: 50% 100%; }
+  .petal:hover { fill: #fff; }
+  .petal.gone { animation: pluck 1s ease-in forwards; pointer-events: none; }
+  @keyframes pluck { to { transform: translateY(-90px) rotate(50deg) scale(.5); opacity: 0; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- 4. sky ---------- */
+  #sky { width: min(88vw, 52vh); aspect-ratio: 1; overflow: visible; }
+  #shapeLine {
+    fill: rgba(255, 240, 200, 0); stroke: #fff2b3; stroke-width: .22; stroke-linejoin: round;
+    stroke-dasharray: 1; stroke-dashoffset: 1;
+    transition: stroke-dashoffset 3s ease-in-out, fill 2s 2.5s;
+  }
+  #shapeLine.draw { stroke-dashoffset: 0; fill: rgba(255, 240, 200, .16); }
+  #stemLine { fill: none; stroke: #c8f0c0; stroke-width: .3; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 1.2s 2.6s ease-out; }
+  #stemLine.draw { stroke-dashoffset: 0; }
+  .mstar { cursor: pointer; }
+  .mstar .halo { fill: #ffd1e6; opacity: .7; transform-box: fill-box; transform-origin: center; animation: pulse 1.6s ease-in-out infinite; }
+  .mstar .core { fill: #fff; }
+  .mstar.lit .halo { fill: #ffe39a; opacity: .95; animation: none; }
+  .mstar.lit .core { fill: #fffbe6; }
+  @keyframes pulse { 50% { transform: scale(1.6); opacity: .25; } }
+
+  /* ---------- 5. scratch coupons ---------- */
+  .coupons { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; max-width: 820px; }
+  .coupon {
+    position: relative; width: min(84vw, 240px); height: clamp(100px, 16vh, 136px); border-radius: 14px; overflow: hidden;
+    background: #fff; color: #c4466f;
+    border: 2px dashed #f5b5c8; box-sizing: border-box; padding: 10px 14px;
+    box-shadow: 0 6px 18px rgba(208, 87, 127, .1);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  }
+  .coupon .c-icon { font-size: clamp(38px, 7vh, 52px); letter-spacing: .05em; }
+  .big-icon { display: inline-block; font-size: clamp(36px, 7vh, 52px); line-height: 1.1; animation: iconPop .5s ease-out; }
+  @keyframes iconPop { 0% { transform: scale(.3) rotate(-20deg); } 70% { transform: scale(1.15); } 100% { transform: none; } }
+  .coupon canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; transition: opacity .8s; }
+  .coupon.revealed canvas { opacity: 0; pointer-events: none; }
+  .coupon.revealed { animation: pop .6s ease-out; }
+  @keyframes pop { 40% { transform: scale(1.06); } }
+
+  /* ---------- 6. letter ---------- */
+  .paper {
+    width: min(90vw, 560px); max-height: 50vh; overflow: auto; box-sizing: border-box;
+    padding: 22px 24px; border-radius: 6px; text-align: left; cursor: pointer;
+    background-color: #fffdf8; color: #5e3a48; font-size: clamp(15px, 2vw, 18px); line-height: 1.75;
+    background-image: repeating-linear-gradient(transparent 0 calc(1.75em - 1px), rgba(208, 87, 127, .12) calc(1.75em - 1px) 1.75em);
+    background-attachment: local;
+    box-shadow: 0 14px 40px rgba(160, 90, 110, .2); transform: rotate(-.6deg);
+  }
+  #letterText { white-space: pre-wrap; }
+  #letterText.typing::after { content: "|"; color: #ff7aa2; animation: blink .8s steps(1) infinite; }
+  .ask { opacity: 0; pointer-events: none; transform: translateY(10px); transition: opacity .8s, transform .8s; }
+  .ask.show { opacity: 1; pointer-events: auto; transform: none; }
+  .ask .sub { font-size: clamp(17px, 2.6vw, 22px); color: #6b3a4f; margin-bottom: 12px; }
+  .choices { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; align-items: center; min-height: 64px; }
+  #no { z-index: 10; }
+
+  /* ---------- finale ---------- */
+  .big { font-size: clamp(40px, 9vw, 96px); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01s !important; animation-delay: 0s !important; transition-duration: .01s !important; }
+  }
+</style>
+</head>
+<body>
+<div class="dusk"></div>
+<canvas id="c"></canvas>
+<div class="dots" id="dots"></div>
+<button class="music" id="music" hidden title="Bật/tắt nhạc">♪</button>
+
+<!-- 0. Phone gate -->
+<section class="scene" data-scene="gate">
+  <h2 class="title">Khoan đã ✋</h2>
+  <p class="sub" id="gateSub"></p>
+  <form class="gate" id="gateForm" autocomplete="off">
+    <input id="phone" type="tel" inputmode="numeric" placeholder="0xxx xxx xxx" maxlength="16" aria-label="Số điện thoại">
+    <button class="btn" type="submit">Vào thôi →</button>
+  </form>
+  <p class="count" id="gateMsg">&nbsp;</p>
+</section>
+
+<!-- 1. Envelope -->
+<section class="scene" data-scene="envelope">
+  <h2 class="title" id="toName"></h2>
+  <p class="sub" id="envSub"></p>
+  <div class="envelope" id="env">
+    <div class="env-back"></div>
+    <div class="env-letter" id="envLetter"></div>
+    <div class="env-front"></div>
+    <div class="env-flap"></div>
+    <div class="env-seal">🌷</div>
+  </div>
+  <p class="count env-hint">Chạm vào phong thư để mở</p>
+</section>
+
+<!-- 2. Bouquet (flowers are drawn on the canvas) -->
+<section class="scene scene-bouquet" data-scene="bouquet">
+  <div class="msg">
+    <h1 id="bqTitle"></h1>
+    <p class="sub" id="bqMessage"></p>
+    <p class="hint">Thử chạm vào màn hình xem ✨</p>
+  </div>
+  <button class="btn next" id="nextBouquet" data-go="daisy">Tiếp theo →</button>
+</section>
+
+<!-- 3. Likes me, likes me not -->
+<section class="scene" data-scene="daisy">
+  <h2 class="title">Bứt hoa vô tri 🌼</h2>
+  <p class="sub">Mỗi cánh là một điều linh tinh 😅</p>
+  <svg id="daisy" viewBox="-140 -140 280 280"></svg>
+  <div class="card" id="reasonCard"><span>Chạm vào một cánh hoa 🌸</span></div>
+  <p class="count" id="petalCount"></p>
+  <button class="btn next" id="nextDaisy" data-go="sky">Tiếp tục →</button>
+</section>
+
+<!-- 4. First impressions -->
+<section class="scene" data-scene="sky">
+  <h2 class="title">Chạm thử mấy ngôi sao ✨</h2>
+  <svg id="sky" viewBox="-20 -19 40 40"></svg>
+  <div class="card" id="memoCard"><span class="big-icon">💫</span></div>
+  <p class="count" id="memoCount"></p>
+  <button class="btn next" id="nextSky" data-go="gifts">Còn nữa nè 🎁</button>
+</section>
+
+<!-- 5. Scratch coupons -->
+<section class="scene" data-scene="gifts">
+  <h2 class="title">Cào thử xem 🎁</h2>
+  <div class="coupons" id="coupons"></div>
+  <button class="btn next" id="nextGifts" data-go="letter">Còn một chút nữa thôi →</button>
+</section>
+
+<!-- 6. Letter + question -->
+<section class="scene" data-scene="letter">
+  <h2 class="title">Vài dòng gửi em ✍️</h2>
+  <div class="paper" id="paper"><span id="letterText"></span></div>
+  <div class="ask" id="ask">
+    <p class="sub" id="question"></p>
+    <div class="choices" id="choices">
+      <button class="btn ghost" id="no"></button>
+    </div>
+  </div>
+</section>
+
+<!-- Finale -->
+<section class="scene" data-scene="finale">
+  <h2 class="title big" id="finaleTitle"></h2>
+  <p class="sub" id="finaleText"></p>
+  <button class="btn ghost" id="replay" style="margin-top:20px">Xem lại từ đầu ↺</button>
+</section>
+
+<script>
+// =====================================================================
+// ✏️  PERSONALIZE EVERYTHING HERE
+//     {herName}, {nick}, {fromName} are replaced automatically.
+// =====================================================================
+const CONFIG = {
+  herName: 'Thảo Quyên',
+  nick: 'Quyên',
+  fromName: 'Anh',          // ✏️ your name
+
+  // Optional background music: put an mp3 next to this file, e.g. 'song.mp3'
+  music: '',
+
+  // Phone gate. Only a salted SHA-256 hash is stored, never the number itself.
+  // To change the number: node -e 'console.log(require("crypto").createHash("sha256").update("bouquet-gate-v1:"+"0xxxxxxxxx").digest("hex"))'
+  phoneHash: '07746b4ac2c4658f954cd7088dfc144128a125873b56d697f1eb35dbb5c37c9d',
+  gateSub: 'Trang này chỉ dành cho đúng một người. Nhập số điện thoại chính chủ để vào nha 📱',
+  gateWrong: ['Sai rồi nè 🙅‍♀️ Thử lại xem', 'Hmm... số này hong phải chính chủ 🤔', 'Người lạ ơi, web này không phải của bạn đâu 😆'],
+
+  envelopeSub: 'Có chút quà nho nhỏ nè. Không phải virus đâu 😆',
+  envelopeLetter: 'Mở ra xem thử 👀',
+
+  bouquetTitle: 'Nice to meet you',
+  bouquetMessage: 'Một bó hoa nho nhỏ gửi {nick} 🌷',
+
+  // Each petal = one random little thing. The last petal always shows `finalPetal`.
+  reasons: [
+    'Lướt TikTok nhanh hơn anh chạy bộ 📱💨',
+    'Mê nhậu, tửu lượng thì... để dành 🍻',
+    'Kịp gặp trước khi em "chạy trốn" khỏi công ty 🏃‍♀️💨',
+    'Bạn bè kể đúng khoảng 70% 🤓',
+    'Hôm đó Sài Gòn không mưa ☀️',
+    'Nói một hồi quên luôn đang nói gì 😂',
+  ],
+  finalPetal: 'Hết cánh rồi 🌼 Xin lỗi bông hoa 🙏',
+
+  // Stars and scratch cards show only random icons — no words
+  skyStars: 6,
+  skyIcons: ['🐣', '🦦', '🐧', '🐢', '🐱', '🦖', '🐸', '🦆', '🍜', '🥟', '🍉', '🍑', '🛵', '🪩', '🎤', '📱', '🍻', '☀️'],
+  scratchCount: 3,
+  scratchIcons: ['🍻🥴', '🏃‍♀️💨🐢', '📱🤳✨', '🎤🎶', '🍜😋', '🐱☕', '🦦🌼', '🐧💃', '🥟🔥', '🦖🌸', '🛵💨', '🐸👑'],
+
+  letter: `Gửi {herName},
+
+Trước khi gặp, anh nghe bạn bè nhắc tên em khá nhiều, nên cũng tò mò không biết em là người thế nào.
+
+Gặp rồi mới thấy: em cười giống Hà Nhi ghê, mê TikTok, mê nhậu nhưng tửu lượng thì khiêm tốn 😆 Nói chuyện với em khá là vui.
+
+Chúc em ở công ty mới nhiều may mắn, tìm được nhiều niềm vui và gặp toàn người tốt nha.
+
+Gửi em bó hoa nhỏ này 🌷
+
+— {fromName}
+(người hôm bữa ghé Sài Gòn 👋)`,
+
+  question: 'Lần tới anh ghé, kèo nào trước nè? 👀',
+  // One button per choice; each leads to its own finale
+  yesOptions: [
+    { label: 'Kèo nhậu 🍻', title: 'Kèo nhậu 🍻', text: 'Uống từ từ thôi nha 😆' },
+    { label: 'Kèo chạy bộ 🏃‍♀️', title: 'Kèo chạy bộ 🏃‍♀️', text: 'Chạy chậm thôi nha 🐢' },
+  ],
+  // The "no" button dodges through these, then stops on `noFinal` and becomes clickable
+  noTexts: ['Để xem đã 🤔', 'Bận lắm hả? 🥲', 'Nút này hơi khó bấm nha', 'Chọn đại một kèo đi 😆'],
+  noFinal: 'Để em suy nghĩ thêm 😌',
+
+  finaleMaybe: { title: 'Okie 😌', text: 'Bó hoa cứ giữ nha 🌷' },
+};
+// =====================================================================
+
+const $ = s => document.querySelector(s);
+const cvs = $('#c');
+const ctx = cvs.getContext('2d');
+const TAU = Math.PI * 2;
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const fill = s => s.replaceAll('{herName}', CONFIG.herName).replaceAll('{nick}', CONFIG.nick).replaceAll('{fromName}', CONFIG.fromName);
+
+const clamp = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v);
+const easeInOut = t => (t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const easeOutBack = t => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = arr => arr[(Math.random() * arr.length) | 0];
+function rgba(hex, a) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`;
+}
+// 5-petal flower outline (round petals, notched between them), one petal pointing up; radius 7..16
+function flowerPt(t) {
+  const r = 7 + 9 * Math.abs(Math.cos(2.5 * t)), a = t - Math.PI / 2;
+  return [r * Math.cos(a), r * Math.sin(a)];
+}
+
+// ---------- layout ----------
+let W, H, S, DPR, stars = [];
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = innerWidth; H = innerHeight;
+  cvs.width = W * DPR; cvs.height = H * DPR;
+  cvs.style.width = W + 'px'; cvs.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  // bouquet is drawn in "units": ~840 wide, ~620 tall
+  S = Math.min(W / 840, (H * 0.55) / 600);
+  stars = Array.from({ length: Math.round((W * H) / 8000) }, () => ({
+    x: Math.random() * W, y: Math.random() * H,
+    r: rand(.3, 1.6), p: Math.random() * TAU, s: rand(.6, 2.4),
+  }));
+}
+addEventListener('resize', resize);
+resize();
+// bottom of the bouquet, leaving room for the "next" button
+const baseY = () => H - 72 - 10 * S;
+
+// =====================================================================
+// Bouquet (canvas)
+// =====================================================================
+// col[0] = petal tip colour, col[1] = petal base colour. Drawn back to front.
+const FLOWERS = [
+  { x: -330, y: -265, type: 'daisy', col: ['#ffffff', '#ffe1ea'], size: .8,  d: 1.2 },
+  { x:  330, y: -270, type: 'tulip', col: ['#ffd9c4', '#ff9a85'], size: .85, d: 1.3 },
+  { x: -250, y: -360, type: 'rose',  col: ['#ffe2cc', '#f4977a'], size: .95, d: .8 },
+  { x:  255, y: -355, type: 'daisy', col: ['#f7f0ff', '#c6a8f5'], size: .9,  d: .9 },
+  { x: -140, y: -450, type: 'tulip', col: ['#ffe6f0', '#f58ab5'], size: 1,   d: .5 },
+  { x:  145, y: -445, type: 'rose',  col: ['#ffd3e0', '#f07ca0'], size: 1,   d: .6 },
+  { x:    0, y: -520, type: 'rose',  col: ['#ffe0ea', '#e86a92'], size: 1.2, d: .3 },
+  { x:  -70, y: -335, type: 'daisy', col: ['#ffffff', '#fff0c2'], size: .85, d: 1.0 },
+  { x:   78, y: -325, type: 'tulip', col: ['#fff5bf', '#ffc04d'], size: .8,  d: 1.1 },
+];
+
+function qpt(p0, c, p1, t) {
+  const u = 1 - t;
+  return [u * u * p0[0] + 2 * u * t * c[0] + t * t * p1[0], u * u * p0[1] + 2 * u * t * c[1] + t * t * p1[1]];
+}
+function qtan(p0, c, p1, t) {
+  return [2 * (1 - t) * (c[0] - p0[0]) + 2 * t * (p1[0] - c[0]), 2 * (1 - t) * (c[1] - p0[1]) + 2 * t * (p1[1] - c[1])];
+}
+
+FLOWERS.forEach((f, i) => {
+  f.p0 = [f.x * .06, 0];
+  f.cp = [f.x * .1, f.y * .9];
+  f.leaves = [];
+  // put leaves on the part of the stem that sticks out above the wrapping paper
+  for (let t = .3; t < .9; t += .02) {
+    if (qpt(f.p0, f.cp, [f.x, f.y], t)[1] < -245) {
+      const side = i % 2 ? 1 : -1;
+      f.leaves.push({ t, side, len: 36 + f.size * 12 });
+      if (t + .14 < .92) f.leaves.push({ t: t + .14, side: -side, len: 30 + f.size * 8 });
+      break;
+    }
+  }
+});
+
+function petalPath(L, w, r = .6) {
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(w, -L * .25, w * r, -L, 0, -L);
+  ctx.bezierCurveTo(-w * r, -L, -w, -L * .25, 0, 0);
+  ctx.closePath();
+}
+
+// tiny 5-petal blossom, used for floating particles
+function blossom(s, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * TAU - Math.PI / 2, cx = Math.cos(a) * s * .32, cy = Math.sin(a) * s * .32;
+    ctx.moveTo(cx + s * .28, cy);
+    ctx.arc(cx, cy, s * .28, 0, TAU);
+  }
+  ctx.fill();
+  ctx.fillStyle = '#ffd36e';
+  ctx.beginPath(); ctx.arc(0, 0, s * .16, 0, TAU); ctx.fill();
+}
+
+function leaf(len, lp) {
+  ctx.scale(lp, lp);
+  const g = ctx.createLinearGradient(0, 0, len, 0);
+  g.addColorStop(0, '#4f9a52');
+  g.addColorStop(1, '#a5dc9a');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.quadraticCurveTo(len * .45, -len * .38, len, 0);
+  ctx.quadraticCurveTo(len * .45, len * .38, 0, 0);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(40,90,40,.4)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(len * .9, 0);
+  ctx.stroke();
+}
+
+function daisy(p, f) {
+  const o = easeOutBack(p);
+  const n = 13, L = 46, w = 9;
+  for (let row = 0; row < 2; row++) {
+    for (let i = 0; i < n; i++) {
+      ctx.save();
+      ctx.rotate((i / n) * TAU + row * (TAU / n / 2) + (1 - p) * .8);
+      const l = L * (row ? .82 : 1) * o;
+      const g = ctx.createLinearGradient(0, 0, 0, -l);
+      g.addColorStop(0, f.col[1]);
+      g.addColorStop(1, f.col[0]);
+      ctx.fillStyle = g;
+      petalPath(l, w * Math.min(1, o), .5);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(180,110,140,.35)';
+      ctx.lineWidth = .8;
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+  const r = 13 * o;
+  const cg = ctx.createRadialGradient(-r * .3, -r * .3, 1, 0, 0, r);
+  cg.addColorStop(0, '#fff09a');
+  cg.addColorStop(1, '#f2a516');
+  ctx.fillStyle = cg;
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.fill();
+  ctx.fillStyle = 'rgba(160,80,0,.45)';
+  for (let i = 0; i < 14; i++) {
+    const a = i * 2.4, rr = Math.sqrt(i / 14) * r * .75;
+    ctx.beginPath(); ctx.arc(Math.cos(a) * rr, Math.sin(a) * rr, 1.2 * o, 0, TAU); ctx.fill();
+  }
+}
+
+function rose(p, f) {
+  const layers = [
+    { n: 6, L: 56, w: 36, off: 0 },
+    { n: 5, L: 44, w: 30, off: .5 },
+    { n: 5, L: 32, w: 24, off: .2 },
+    { n: 4, L: 21, w: 16, off: .8 },
+  ];
+  layers.forEach((ly, j) => {
+    const lp = clamp((p - j * .12) / .64);
+    if (lp <= 0) return;
+    const o = easeOutBack(lp);
+    for (let i = 0; i < ly.n; i++) {
+      ctx.save();
+      ctx.rotate((i / ly.n) * TAU + ly.off + (1 - lp) * .7);
+      const g = ctx.createLinearGradient(0, 0, 0, -ly.L * o);
+      g.addColorStop(0, f.col[1]);
+      g.addColorStop(1, f.col[0]);
+      ctx.fillStyle = g;
+      petalPath(ly.L * o, ly.w * o, .95);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(150,50,80,.22)';
+      ctx.lineWidth = .9;
+      ctx.stroke();
+      ctx.restore();
+    }
+  });
+  const cp = clamp((p - .4) / .6);
+  if (cp > 0) {
+    ctx.fillStyle = f.col[1];
+    ctx.beginPath(); ctx.arc(0, 0, 11 * cp, 0, TAU); ctx.fill();
+    ctx.strokeStyle = rgba(f.col[0], .8 * cp);
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    for (let a = 0; a < TAU * 2.2; a += .2) {
+      const rr = (1 + a * 0.7) * cp;
+      const x = Math.cos(a) * rr, y = Math.sin(a) * rr;
+      a === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+}
+
+function tulip(p, f) {
+  const o = easeOutBack(p);
+  const a = .08 + .3 * clamp(o, 0, 1.2);
+  ctx.scale(o, o);
+  const g = ctx.createLinearGradient(0, 0, 0, -62);
+  g.addColorStop(0, f.col[1]);
+  g.addColorStop(1, f.col[0]);
+  ctx.strokeStyle = 'rgba(150,50,60,.25)';
+  ctx.lineWidth = 1;
+  ctx.fillStyle = g;
+  petalPath(64, 22, .3); ctx.fill(); ctx.stroke();
+  for (const s of [-1, 1]) {
+    ctx.save();
+    ctx.translate(s * 3, 0);
+    ctx.rotate(s * a);
+    petalPath(60, 20, .25); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+  const g2 = ctx.createLinearGradient(0, 0, 0, -54);
+  g2.addColorStop(0, f.col[1]);
+  g2.addColorStop(.7, f.col[0]);
+  g2.addColorStop(1, '#ffffff');
+  ctx.fillStyle = g2;
+  petalPath(54, 17, .3); ctx.fill(); ctx.stroke();
+}
+
+const BLOOMS = { daisy, rose, tulip };
+
+// bouquet visibility (fades when leaving the bouquet scene)
+let BA = 0;
+
+// kraft-paper wrapping
+function backPaper(a) {
+  ctx.globalAlpha = a * BA;
+  const g = ctx.createLinearGradient(-205, 0, 205, 0);
+  g.addColorStop(0, '#a87b52');
+  g.addColorStop(.5, '#cfa57a');
+  g.addColorStop(1, '#a87b52');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(-30, 6);
+  ctx.lineTo(-205, -262);
+  ctx.quadraticCurveTo(0, -305, 205, -262);
+  ctx.lineTo(30, 6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = BA;
+}
+
+function frontPaperPath() {
+  ctx.beginPath();
+  ctx.moveTo(-28, 6);
+  ctx.lineTo(-175, -212);
+  const n = 7, step = 350 / n;
+  for (let i = 0; i < n; i++) {
+    const x0 = -175 + step * i;
+    ctx.quadraticCurveTo(x0 + step / 2, i % 2 ? -196 : -232, x0 + step, -212);
+  }
+  ctx.lineTo(28, 6);
+  ctx.closePath();
+}
+
+function frontPaper(a) {
+  ctx.globalAlpha = a * BA;
+  const g = ctx.createLinearGradient(-175, 0, 175, 0);
+  g.addColorStop(0, '#d9b386');
+  g.addColorStop(.3, '#f3dcb8');
+  g.addColorStop(.5, '#e2c094');
+  g.addColorStop(.7, '#f6e3c4');
+  g.addColorStop(1, '#d4ab7c');
+  ctx.fillStyle = g;
+  frontPaperPath();
+  ctx.fill();
+  // folds
+  ctx.strokeStyle = 'rgba(140,95,55,.3)';
+  ctx.lineWidth = 1.2;
+  for (const [x0, x1] of [[-95, -12], [0, 0], [85, 12]]) {
+    ctx.beginPath(); ctx.moveTo(x0, -210); ctx.lineTo(x1, 4); ctx.stroke();
+  }
+  // ribbon band, clipped to the paper
+  ctx.save();
+  frontPaperPath();
+  ctx.clip();
+  ctx.fillStyle = '#f29bb2';
+  ctx.fillRect(-200, -88, 400, 16);
+  ctx.fillStyle = 'rgba(255,255,255,.45)';
+  ctx.fillRect(-200, -86, 400, 3);
+  ctx.restore();
+  bow();
+  ctx.globalAlpha = BA;
+}
+
+function bow() {
+  ctx.save();
+  ctx.translate(0, -80);
+  ctx.fillStyle = '#f29bb2';
+  ctx.strokeStyle = '#ffd0dc';
+  ctx.lineWidth = 1.5;
+  // tails
+  ctx.beginPath();
+  ctx.moveTo(-4, 4); ctx.quadraticCurveTo(-20, 30, -38, 54); ctx.lineTo(-25, 58); ctx.quadraticCurveTo(-10, 34, 4, 6);
+  ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(4, 4); ctx.quadraticCurveTo(18, 28, 32, 48); ctx.lineTo(20, 53); ctx.quadraticCurveTo(8, 32, -4, 6);
+  ctx.closePath(); ctx.fill();
+  // loops
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.bezierCurveTo(s * 25, -38, s * 70, -22, s * 55, 2);
+    ctx.bezierCurveTo(s * 48, 16, s * 20, 10, 0, 0);
+    ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(s * 8, -3);
+    ctx.quadraticCurveTo(s * 35, -20, s * 48, -4);
+    ctx.stroke();
+  }
+  ctx.fillStyle = '#e07a98';
+  ctx.beginPath(); ctx.ellipse(0, 0, 9, 8, 0, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
+function groundGlow() {
+  ctx.save();
+  ctx.scale(1, .22);
+  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 420);
+  g.addColorStop(0, 'rgba(240,150,170,.2)');
+  g.addColorStop(1, 'rgba(240,150,170,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(0, 0, 420, 0, TAU); ctx.fill();
+  ctx.restore();
+}
+
+const GROW = 1.5, BLOOM = 1.4;
+
+function flowerState(f, i) {
+  const g = easeInOut(clamp((T - f.d) / GROW));
+  const p = clamp((T - f.d - GROW * .9) / BLOOM);
+  const sway = Math.sin(T * .9 + i * 1.3) * 8 * g;
+  return { g, p, sway, tip: [f.x + sway, f.y] };
+}
+
+function drawStems() {
+  FLOWERS.forEach((f, i) => {
+    const { g, p, tip } = flowerState(f, i);
+    if (g <= 0) return;
+    const N = 40;
+    ctx.beginPath();
+    ctx.moveTo(f.p0[0], f.p0[1]);
+    let end = f.p0;
+    for (let k = 1; k <= N; k++) {
+      end = qpt(f.p0, f.cp, tip, (g * k) / N);
+      ctx.lineTo(end[0], end[1]);
+    }
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#4f9a52';
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(170,225,150,.6)';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+
+    for (const lf of f.leaves) {
+      const lp = clamp((g - lf.t - .03) / .3);
+      if (lp <= 0) continue;
+      const pt = qpt(f.p0, f.cp, tip, lf.t);
+      const tn = qtan(f.p0, f.cp, tip, lf.t);
+      ctx.save();
+      ctx.translate(pt[0], pt[1]);
+      ctx.rotate(Math.atan2(tn[1], tn[0]) + lf.side * .85);
+      leaf(lf.len, easeOutBack(lp));
+      ctx.restore();
+    }
+
+    if (p <= 0) { // little bud riding the growing tip
+      ctx.fillStyle = '#6cb36a';
+      ctx.beginPath(); ctx.ellipse(end[0], end[1], 4.5, 6, 0, 0, TAU); ctx.fill();
+    }
+  });
+}
+
+function drawBlooms() {
+  FLOWERS.forEach((f, i) => {
+    const { p, sway, tip } = flowerState(f, i);
+    if (p <= 0) return;
+    ctx.save();
+    ctx.translate(tip[0], tip[1]);
+    ctx.rotate(sway * .012);
+    const R = 95 * f.size;
+    const gl = ctx.createRadialGradient(0, 0, 0, 0, 0, R);
+    gl.addColorStop(0, rgba(f.col[1], .22 * p));
+    gl.addColorStop(1, rgba(f.col[1], 0));
+    ctx.fillStyle = gl;
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.fill();
+    ctx.scale(f.size, f.size);
+    BLOOMS[f.type](p, f);
+    ctx.restore();
+  });
+}
+
+// =====================================================================
+// Particles (petals, blossoms, sparks, confetti)
+// =====================================================================
+const PETAL_COLORS = ['#ffb7c5', '#ffcfd8', '#ffd2b3', '#e6cfff', '#ffc8dd', '#fcbfb0'];
+const BLOSSOM_COLORS = ['#ff9fb8', '#ffb38f', '#c9b3ff', '#ffb3c7', '#ffd27a'];
+const CONFETTI_COLORS = ['#ff9fb8', '#ffc38f', '#b9a4ff', '#8fd3c8', '#ffd96a', '#ff7aa2'];
+let parts = [];
+
+const addPetal = (x, y, vx, vy) =>
+  parts.push({ k: 'petal', x, y, vx, vy, r: Math.random() * TAU, vr: rand(-3, 3), s: rand(7, 14), c: pick(PETAL_COLORS), life: 0, ph: Math.random() * TAU });
+// drag > 0: velocity decays on both axes (used to draw shapes that expand then stop)
+const addBlossom = (x, y, vx, vy, s = rand(10, 18), drag = 0, max = rand(3, 5)) =>
+  parts.push({ k: 'blossom', x, y, vx, vy, s, drag, c: pick(BLOSSOM_COLORS), life: 0, max, ph: Math.random() * TAU });
+const addSpark = (x, y, vx, vy) =>
+  parts.push({ k: 'spark', x, y, vx, vy, s: rand(3, 7), life: 0, max: rand(.6, 1.2) });
+const addConfetti = (x, y) =>
+  parts.push({ k: 'confetti', x, y, vx: rand(-30, 30), vy: rand(60, 120), w: rand(6, 10), h: rand(3, 5), r: Math.random() * TAU, vr: rand(-4, 4), c: pick(CONFETTI_COLORS), life: 0, ph: Math.random() * TAU });
+
+function burst(x, y) {
+  for (let i = 0; i < 26; i++) {
+    const a = Math.random() * TAU, sp = rand(120, 340);
+    addPetal(x, y, Math.cos(a) * sp, Math.sin(a) * sp);
+  }
+  for (let i = 0; i < 6; i++) addBlossom(x + rand(-20, 20), y, rand(-60, 60), rand(-140, -60), rand(12, 22));
+  sparks(x, y, 16);
+}
+
+function sparks(x, y, n) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * TAU, sp = rand(80, 260);
+    addSpark(x, y, Math.cos(a) * sp, Math.sin(a) * sp);
+  }
+}
+
+// blossoms flying outward along a flower outline
+function flowerBurst(x, y, k = 1) {
+  const n = 60;
+  for (let i = 0; i < n; i++) {
+    const [fx, fy] = flowerPt((i / n) * TAU);
+    addBlossom(x, y, fx * k * 22, fy * k * 22, rand(9, 15), 1.6, 2.6);
+  }
+  sparks(x, y, 20);
+}
+
+let spawnA = 0, spawnH = 0;
+function updateParticles(dt) {
+  let rate = { envelope: .6, bouquet: T > 4.5 ? .16 : 0, sky: 0, finale: .5 }[scene] ?? .3;
+  if (reduce && rate) rate *= 4;
+  if (rate) {
+    for (spawnA += dt; spawnA > rate; spawnA -= rate)
+      if (parts.length < 170) addPetal(Math.random() * W, -20, rand(-15, 15), rand(30, 70));
+  } else spawnA = 0;
+
+  if (scene === 'bouquet' && T > 4.5) {
+    for (spawnH += dt; spawnH > 1.1; spawnH -= 1.1)
+      addBlossom(W / 2 + rand(-250, 250) * S, baseY() - 320 * S, rand(-10, 10), rand(-60, -30));
+  } else if (scene === 'finale') {
+    for (spawnH += dt; spawnH > (reduce ? .3 : .05); spawnH -= reduce ? .3 : .05)
+      if (parts.length < 400) addConfetti(Math.random() * W, -10);
+  }
+
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const q = parts[i];
+    q.life += dt;
+    let dead = false;
+    if (q.k === 'petal' || q.k === 'confetti') {
+      const fall = q.k === 'petal' ? 40 + q.s * 3 : 110;
+      q.vy += (fall - q.vy) * dt * 1.2;
+      q.vx *= 1 - dt * 1.2;
+      q.x += (q.vx + Math.sin(q.life * 1.8 + q.ph) * 25) * dt;
+      q.y += q.vy * dt;
+      q.r += q.vr * dt;
+      dead = q.y > H + 30 || q.x < -80 || q.x > W + 80;
+    } else if (q.k === 'blossom') {
+      if (q.drag) {
+        q.vx *= 1 - dt * q.drag; q.vy *= 1 - dt * q.drag;
+        q.x += q.vx * dt;
+      } else {
+        q.vx *= 1 - dt;
+        q.x += (q.vx + Math.sin(q.life * 2 + q.ph) * 18) * dt;
+      }
+      q.y += q.vy * dt;
+      dead = q.life > q.max;
+    } else {
+      q.vx *= 1 - dt * 3; q.vy *= 1 - dt * 3;
+      q.x += q.vx * dt; q.y += q.vy * dt;
+      dead = q.life > q.max;
+    }
+    if (dead) parts.splice(i, 1);
+  }
+}
+
+function drawParticles() {
+  for (const q of parts) {
+    ctx.save();
+    ctx.translate(q.x, q.y);
+    if (q.k === 'petal') {
+      ctx.rotate(q.r);
+      ctx.scale(1, .45 + .55 * Math.abs(Math.sin(q.life * 2.5 + q.ph)));
+      ctx.translate(0, q.s / 2);
+      ctx.globalAlpha = .85;
+      ctx.fillStyle = q.c;
+      petalPath(q.s, q.s * .6, .8);
+      ctx.fill();
+    } else if (q.k === 'confetti') {
+      ctx.rotate(q.r);
+      ctx.scale(1, Math.cos(q.life * 6 + q.ph));
+      ctx.fillStyle = q.c;
+      ctx.fillRect(-q.w / 2, -q.h / 2, q.w, q.h);
+    } else if (q.k === 'blossom') {
+      const l = clamp(q.life / q.max);
+      ctx.globalAlpha = (q.drag ? 1 - l * l : Math.sin(Math.PI * l)) * .95;
+      ctx.rotate(q.life * .8 + q.ph);
+      blossom(q.s, q.c);
+    } else {
+      ctx.globalAlpha = 1 - q.life / q.max;
+      ctx.strokeStyle = '#f5b942';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(-q.s, 0); ctx.lineTo(q.s, 0);
+      ctx.moveTo(0, -q.s); ctx.lineTo(0, q.s);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+// soft pastel bokeh by day, twinkling stars on the dusk sky
+let DK = 0;
+function drawStars(time, dt) {
+  for (const s of stars) {
+    const tw = .15 + .6 * Math.abs(Math.sin(time * s.s * .5 + s.p));
+    s.y -= s.s * 3 * dt * (1 - DK);
+    if (s.y < -10) s.y = H + 10;
+    if (DK < .99) {
+      ctx.fillStyle = `rgba(255,170,195,${tw * .28 * (1 - DK)})`;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r * 3, 0, TAU); ctx.fill();
+    }
+    if (DK > .01) {
+      ctx.fillStyle = `rgba(255,255,255,${tw * DK})`;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, TAU); ctx.fill();
+    }
+  }
+}
+
+// ---------- main loop ----------
+let last = performance.now(), bqStart = last, T = 0;
+
+function frame(now) {
+  const dt = Math.min((now - last) / 1000, .05);
+  last = now;
+  T = (now - bqStart) / 1000 + (reduce ? 10 : 0);
+
+  ctx.clearRect(0, 0, W, H);
+  DK += ((scene === 'sky' ? 1 : 0) - DK) * Math.min(1, dt * 2);
+  drawStars(now / 1000, dt);
+
+  BA += ((scene === 'bouquet' ? 1 : 0) - BA) * Math.min(1, dt * 2.5);
+  if (BA > .01) {
+    ctx.save();
+    ctx.globalAlpha = BA;
+    ctx.translate(W / 2, baseY());
+    ctx.scale(S, S);
+    const paperA = clamp(T / .8);
+    groundGlow();
+    backPaper(paperA);
+    drawStems();
+    frontPaper(paperA);
+    drawBlooms();
+    ctx.restore();
+  }
+
+  updateParticles(dt);
+  drawParticles();
+  requestAnimationFrame(frame);
+}
+
+// =====================================================================
+// Scenes
+// =====================================================================
+const STEPS = ['envelope', 'bouquet', 'daisy', 'sky', 'gifts', 'letter'];
+let scene = null;
+const enter = {};
+
+$('#dots').innerHTML = STEPS.map(() => '<i></i>').join('');
+
+function go(name) {
+  scene = name;
+  document.querySelectorAll('.scene').forEach(el => el.classList.toggle('active', el.dataset.scene === name));
+  document.body.classList.toggle('dusk-on', name === 'sky');
+  $('#dots').style.visibility = name === 'gate' ? 'hidden' : '';
+  const idx = name === 'finale' ? STEPS.length : STEPS.indexOf(name);
+  document.querySelectorAll('#dots i').forEach((d, i) => d.classList.toggle('on', i <= idx));
+  enter[name]?.();
+}
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-go]');
+  if (b) go(b.dataset.go);
+});
+// tap on empty space = little magic
+document.addEventListener('pointerdown', e => {
+  if (e.target.classList?.contains('scene') && scene !== 'envelope') burst(e.clientX, e.clientY);
+});
+
+function swapCard(card, html) {
+  card.classList.add('swap');
+  setTimeout(() => { card.replaceChildren(...html); card.classList.remove('swap'); }, 220);
+}
+function el(tag, text) {
+  const e = document.createElement(tag);
+  e.textContent = text;
+  return e;
+}
+
+// ---------- 0. phone gate ----------
+// Plain-JS SHA-256 (crypto.subtle is unavailable on file:// and plain http in some browsers)
+function sha256(ascii) {
+  const rotr = (v, n) => (v >>> n) | (v << (32 - n));
+  const K = [], H = [];
+  for (let c = 2, n = 0; n < 64; c++) {
+    let prime = true;
+    for (let d = 2; d * d <= c; d++) if (c % d === 0) { prime = false; break; }
+    if (!prime) continue;
+    if (n < 8) H[n] = (Math.pow(c, 1 / 2) * 2 ** 32) | 0;
+    K[n++] = (Math.pow(c, 1 / 3) * 2 ** 32) | 0;
+  }
+  const bitLen = ascii.length * 8;
+  let msg = ascii + '\x80';
+  while (msg.length % 64 !== 56) msg += '\x00';
+  const words = [];
+  for (let i = 0; i < msg.length; i++) words[i >> 2] |= msg.charCodeAt(i) << ((3 - (i % 4)) * 8);
+  words.push((bitLen / 2 ** 32) | 0, bitLen | 0);
+  let h = H.slice();
+  for (let j = 0; j < words.length; j += 16) {
+    const w = words.slice(j, j + 16);
+    let [a, b, c, d, e, f, g, hh] = h;
+    for (let i = 0; i < 64; i++) {
+      if (i >= 16) {
+        const w15 = w[i - 15], w2 = w[i - 2];
+        w[i] = (w[i - 16] + (rotr(w15, 7) ^ rotr(w15, 18) ^ (w15 >>> 3)) + w[i - 7] + (rotr(w2, 17) ^ rotr(w2, 19) ^ (w2 >>> 10))) | 0;
+      }
+      const t1 = (hh + (rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25)) + ((e & f) ^ (~e & g)) + K[i] + w[i]) | 0;
+      const t2 = ((rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) | 0;
+      hh = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+    }
+    h = h.map((v, i) => (v + [a, b, c, d, e, f, g, hh][i]) | 0);
+  }
+  return h.map(v => (v >>> 0).toString(16).padStart(8, '0')).join('');
+}
+
+// accept "0386 571 ...", "+84 386 ...", "84386..." etc.
+function normalizePhone(s) {
+  let d = s.replace(/\D/g, '');
+  if (d.startsWith('84')) d = '0' + d.slice(2);
+  return d;
+}
+
+$('#gateSub').textContent = fill(CONFIG.gateSub);
+let wrongTries = 0;
+$('#gateForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const form = $('#gateForm');
+  if (sha256('bouquet-gate-v1:' + normalizePhone($('#phone').value)) === CONFIG.phoneHash) {
+    try { sessionStorage.setItem('bouquet-unlocked', '1'); } catch {}
+    $('#gateMsg').textContent = 'Đúng chính chủ rồi 🎉';
+    const r = $('#phone').getBoundingClientRect();
+    burst(r.left + r.width / 2, r.top);
+    $('#phone').blur();
+    setTimeout(() => go('envelope'), 900);
+  } else {
+    $('#gateMsg').textContent = CONFIG.gateWrong[wrongTries++ % CONFIG.gateWrong.length];
+    form.classList.remove('shake');
+    void form.offsetWidth; // restart the shake animation
+    form.classList.add('shake');
+  }
+});
+
+// ---------- 1. envelope ----------
+document.title = fill('Gửi {herName} 🌷');
+$('#toName').textContent = fill('Gửi {herName} 💌');
+$('#envSub').textContent = fill(CONFIG.envelopeSub);
+$('#envLetter').textContent = fill(CONFIG.envelopeLetter);
+
+let audio = null;
+if (CONFIG.music) {
+  audio = new Audio(CONFIG.music);
+  audio.loop = true;
+  audio.volume = .6;
+  $('#music').addEventListener('click', () => {
+    if (audio.paused) audio.play().catch(() => {}); else audio.pause();
+    $('#music').classList.toggle('off', audio.paused);
+  });
+}
+
+$('#env').addEventListener('click', () => {
+  const env = $('#env');
+  if (env.classList.contains('open')) return;
+  env.classList.add('open');
+  if (audio) { audio.play().catch(() => {}); $('#music').hidden = false; }
+  const r = env.getBoundingClientRect();
+  setTimeout(() => burst(r.left + r.width / 2, r.top), 900);
+  setTimeout(() => go('bouquet'), 2300);
+});
+
+// ---------- 2. bouquet ----------
+$('#bqTitle').textContent = fill(CONFIG.bouquetTitle);
+$('#bqMessage').textContent = fill(CONFIG.bouquetMessage);
+enter.bouquet = () => {
+  bqStart = performance.now();
+  setTimeout(() => $('#nextBouquet').classList.add('show'), reduce ? 0 : 7000);
+};
+
+// ---------- 3. daisy ----------
+const PETALS = CONFIG.reasons.length + 1;
+let plucked = 0;
+(function buildDaisy() {
+  const rx = Math.min(24, 220 / PETALS);
+  let html = `<defs>
+    <radialGradient id="pg" cx="50%" cy="95%" r="95%"><stop offset="0" stop-color="#ffd9e4"/><stop offset="1" stop-color="#ffffff"/></radialGradient>
+    <radialGradient id="cg" cx="40%" cy="35%"><stop offset="0" stop-color="#fff3a0"/><stop offset="1" stop-color="#f2a516"/></radialGradient>
+  </defs>`;
+  for (let i = 0; i < PETALS; i++)
+    html += `<g transform="rotate(${(360 / PETALS) * i})"><ellipse class="petal" cx="0" cy="-72" rx="${rx}" ry="54"/></g>`;
+  html += '<circle r="36" fill="url(#cg)"/>';
+  for (let i = 0; i < 40; i++) {
+    const a = i * 2.39996, r = Math.sqrt(i / 40) * 30;
+    html += `<circle cx="${(Math.cos(a) * r).toFixed(2)}" cy="${(Math.sin(a) * r).toFixed(2)}" r="1.8" fill="rgba(160,80,0,.4)"/>`;
+  }
+  $('#daisy').innerHTML = html;
+  $('#petalCount').textContent = `Còn ${PETALS} cánh hoa`;
+})();
+
+$('#daisy').addEventListener('click', e => {
+  const petal = e.target.closest('.petal');
+  if (!petal || petal.classList.contains('gone')) return;
+  petal.classList.add('gone');
+  for (let i = 0; i < 4; i++) addPetal(e.clientX, e.clientY, rand(-90, 90), rand(-140, -40));
+  const k = plucked++;
+  const left = PETALS - plucked;
+  if (left > 0) {
+    swapCard($('#reasonCard'), [el('small', `Cánh #${k + 1}`), el('span', fill(CONFIG.reasons[k]))]);
+    $('#petalCount').textContent = `Còn ${left} cánh hoa`;
+  } else {
+    swapCard($('#reasonCard'), [el('span', fill(CONFIG.finalPetal))]);
+    $('#petalCount').textContent = '🌼';
+    const r = $('#daisy').getBoundingClientRect();
+    flowerBurst(r.left + r.width / 2, r.top + r.height / 2, Math.min(W, H) / 700);
+    setTimeout(() => $('#nextDaisy').classList.add('show'), 1200);
+  }
+});
+
+// ---------- 4. first impressions (stars form a flower) ----------
+let litCount = 0;
+(function buildSky() {
+  const N = 30;
+  const line = Array.from({ length: 90 }, (_, i) => flowerPt((i / 90) * TAU));
+  const d = line.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(2)} ${p[1].toFixed(2)}`).join('') + 'Z';
+  const pts = Array.from({ length: N }, (_, i) => flowerPt((i / N) * TAU));
+  // clickable stars: the 5 petal tips first, then the centre, then the gaps between petals
+  const slots = [
+    ...[0, 1, 2, 3, 4].map(i => flowerPt((i / 5) * TAU)),
+    [0, 0],
+    ...[0, 1, 2, 3, 4].map(i => flowerPt(((i + .5) / 5) * TAU)),
+  ];
+  const star = Array.from({ length: 10 }, (_, i) => {
+    const r = i % 2 ? .45 : 1, a = (i / 10) * TAU - Math.PI / 2;
+    return `${(Math.cos(a) * r).toFixed(2)},${(Math.sin(a) * r).toFixed(2)}`;
+  }).join(' ');
+  let html = `<defs><filter id="glow" x="-2" y="-2" width="5" height="5"><feGaussianBlur stdDeviation=".55"/></filter></defs>
+    <path id="shapeLine" pathLength="1" d="${d}"/>
+    <path id="stemLine" class="stem" pathLength="1" d="M0 7 Q-2 13 0 19.5"/>`;
+  for (const [x, y] of pts) html += `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r=".22" fill="rgba(255,255,255,.5)"/>`;
+  slots.slice(0, CONFIG.skyStars).forEach(slot => {
+    const [x, y] = slot.map(v => v.toFixed(2));
+    html += `<g class="mstar" transform="translate(${x} ${y})">
+      <circle class="halo" r="1.5" filter="url(#glow)"/><polygon class="core" points="${star}"/>
+      <circle r="2.4" fill="transparent"/></g>`;
+  });
+  $('#sky').innerHTML = html;
+  $('#memoCount').textContent = `0/${$('#sky').querySelectorAll('.mstar').length} ✨`;
+})();
+
+function bigIcon(text) {
+  const s = el('span', text);
+  s.className = 'big-icon';
+  return s;
+}
+
+let lastIcon = '';
+$('#sky').addEventListener('click', e => {
+  const s = e.target.closest('.mstar');
+  if (!s) return;
+  let icon;
+  do icon = pick(CONFIG.skyIcons); while (icon === lastIcon && CONFIG.skyIcons.length > 1);
+  lastIcon = icon;
+  sparks(e.clientX, e.clientY, 12);
+  swapCard($('#memoCard'), [bigIcon(icon)]);
+  if (s.classList.contains('lit')) return;
+  s.classList.add('lit');
+  litCount++;
+  const total = $('#sky').querySelectorAll('.mstar').length;
+  $('#memoCount').textContent = `${litCount}/${total} ✨`;
+  if (litCount === total) {
+    $('#shapeLine').classList.add('draw');
+    $('#stemLine').classList.add('draw');
+    setTimeout(() => {
+      swapCard($('#memoCard'), [bigIcon('🌼')]);
+      const r = $('#sky').getBoundingClientRect();
+      flowerBurst(r.left + r.width / 2, r.top + r.height / 2, Math.min(W, H) / 900);
+      $('#nextSky').classList.add('show');
+    }, reduce ? 0 : 3000);
+  }
+});
+
+// ---------- 5. scratch coupons ----------
+let revealed = 0, scratchReady = false;
+// a random handful of icon combos, different every visit
+const scratchPicks = CONFIG.scratchIcons.slice().sort(() => Math.random() - .5).slice(0, CONFIG.scratchCount);
+scratchPicks.forEach(icons => {
+  const box = document.createElement('div');
+  box.className = 'coupon';
+  const face = el('div', icons);
+  face.className = 'c-icon';
+  box.append(face, document.createElement('canvas'));
+  $('#coupons').append(box);
+});
+
+function setupScratch(box) {
+  const cv = box.querySelector('canvas');
+  const c = cv.getContext('2d');
+  const r = cv.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2);
+  const w = r.width, h = r.height;
+  cv.width = Math.round(w * d); cv.height = Math.round(h * d);
+  c.scale(d, d);
+  const g = c.createLinearGradient(0, 0, w, h);
+  g.addColorStop(0, '#f6c1cf');
+  g.addColorStop(.5, '#fde2e4');
+  g.addColorStop(1, '#e3c6f2');
+  c.fillStyle = g;
+  c.fillRect(0, 0, w, h);
+  c.fillStyle = 'rgba(255,255,255,.6)';
+  for (let i = 0; i < 140; i++) { c.beginPath(); c.arc(Math.random() * w, Math.random() * h, Math.random() * 1.5, 0, TAU); c.fill(); }
+  c.fillStyle = '#a0526e';
+  c.font = 'italic 600 17px Georgia, serif';
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText('Cào ở đây ✨', w / 2, h / 2);
+
+  c.globalCompositeOperation = 'destination-out';
+  c.lineCap = 'round'; c.lineWidth = 34;
+  let down = false, lastP = null, moves = 0;
+  const pos = e => { const b = cv.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
+  const scratch = p => {
+    if (lastP) { c.beginPath(); c.moveTo(lastP[0], lastP[1]); c.lineTo(p[0], p[1]); c.stroke(); }
+    c.beginPath(); c.arc(p[0], p[1], 17, 0, TAU); c.fill();
+    lastP = p;
+    if (++moves % 12 === 0) check();
+  };
+  const check = () => {
+    if (box.classList.contains('revealed')) return;
+    const data = c.getImageData(0, 0, cv.width, cv.height).data;
+    let clear = 0, total = 0;
+    for (let i = 3; i < data.length; i += 4 * 37) { total++; if (data[i] < 128) clear++; }
+    if (clear / total > .45) {
+      box.classList.add('revealed');
+      const b = box.getBoundingClientRect();
+      burst(b.left + b.width / 2, b.top + b.height / 2);
+      if (++revealed === scratchPicks.length) setTimeout(() => $('#nextGifts').classList.add('show'), 800);
+    }
+  };
+  cv.addEventListener('pointerdown', e => { down = true; lastP = null; cv.setPointerCapture(e.pointerId); scratch(pos(e)); });
+  cv.addEventListener('pointermove', e => { if (down) scratch(pos(e)); });
+  const up = () => { down = false; lastP = null; check(); };
+  cv.addEventListener('pointerup', up);
+  cv.addEventListener('pointercancel', up);
+}
+
+enter.gifts = () => {
+  if (scratchReady) return;
+  scratchReady = true;
+  document.querySelectorAll('.coupon').forEach(setupScratch);
+};
+
+// ---------- 6. letter + question ----------
+const letter = fill(CONFIG.letter);
+let typed = 0, typer = null;
+$('#question').textContent = fill(CONFIG.question);
+for (const opt of CONFIG.yesOptions) {
+  const b = el('button', fill(opt.label));
+  b.className = 'btn yes';
+  b.addEventListener('click', () => finale(opt));
+  $('#no').before(b);
+}
+$('#no').textContent = fill(CONFIG.noTexts[0]);
+
+enter.letter = () => {
+  const out = $('#letterText');
+  out.classList.add('typing');
+  typer = setInterval(() => {
+    typed = Math.min(letter.length, typed + 1);
+    out.textContent = letter.slice(0, typed);
+    $('#paper').scrollTop = $('#paper').scrollHeight;
+    if (typed >= letter.length) {
+      clearInterval(typer);
+      out.classList.remove('typing');
+      setTimeout(() => $('#ask').classList.add('show'), 600);
+    }
+  }, reduce ? 1 : 38);
+};
+// tap the letter to skip typing
+$('#paper').addEventListener('click', () => { typed = letter.length - 1; });
+
+// "no" dodges a few times for fun, then settles down and becomes a real option
+let dodges = 0, restedAt = 0;
+function dodge(e) {
+  if (restedAt) return;
+  e.preventDefault();
+  const no = $('#no');
+  dodges++;
+  const settle = dodges >= CONFIG.noTexts.length;
+  no.textContent = fill(settle ? CONFIG.noFinal : CONFIG.noTexts[dodges]);
+  const r = no.getBoundingClientRect();
+  no.style.position = 'fixed';
+  no.style.left = rand(10, innerWidth - r.width - 10) + 'px';
+  no.style.top = rand(50, innerHeight - r.height - 10) + 'px';
+  document.querySelectorAll('.yes').forEach(b => { b.style.transform = `scale(${Math.min(1 + dodges * .06, 1.25)})`; });
+  if (settle) restedAt = performance.now();
+}
+function finale(v) {
+  $('#no').style.display = 'none';
+  $('#finaleTitle').textContent = fill(v.title);
+  $('#finaleText').textContent = fill(v.text);
+  go('finale');
+}
+$('#no').addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') dodge(e); });
+$('#no').addEventListener('pointerdown', dodge);
+// ignore the click that belongs to the final dodge
+$('#no').addEventListener('click', () => { if (restedAt && performance.now() - restedAt > 400) finale(CONFIG.finaleMaybe); });
+
+// ---------- finale ----------
+enter.finale = () => {
+  const k = Math.min(W, H) / 650;
+  flowerBurst(W / 2, H / 2, k);
+  for (let i = 1; i <= 5; i++)
+    setTimeout(() => flowerBurst(rand(.2, .8) * W, rand(.2, .7) * H, k * rand(.35, .6)), i * 700);
+};
+$('#replay').addEventListener('click', () => location.reload());
+
+let unlocked = false;
+try { unlocked = sessionStorage.getItem('bouquet-unlocked') === '1'; } catch {}
+go(unlocked ? 'envelope' : 'gate');
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
